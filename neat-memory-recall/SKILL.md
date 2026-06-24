@@ -17,7 +17,7 @@ description: Use when user asks about past experience, approaches, or
 | **Solution** | sol | Project | What works here |
 | **Lesson** | les | Project | What doesn't work |
 
-**ID format:** `{prefix}_{counter}` (e.g., `pat_012`, `sol_003`)
+**ID format:** `{prefix}_{slug}` (e.g., `pat_sql_optimization_before_caching`, `sol_use_zustand`)
 
 *See [../shared/file-operations.md](../shared/file-operations.md) for load patterns and type mappings.*
 
@@ -154,8 +154,8 @@ implementation (path relative to skill directory).
 [Synthesized answer using memory content]
 
 ━━━ Memories Used ━━━
-• pat_005 - SQL Optimization Before Caching
-• les_001 - Redis Caching Masked Root Cause
+• pat_sql_optimization_before_caching - SQL Optimization Before Caching
+• les_redis_caching_masked_root_cause - Redis Caching Masked Root Cause
 
 [If merged:] Note: Merged 2 similar memories about SQL optimization.
 ```
