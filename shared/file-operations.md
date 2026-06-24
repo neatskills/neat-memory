@@ -1,61 +1,53 @@
 # File Operations
 
-Shared patterns for atomic file writes, counter increments, and index
+Shared patterns for atomic file writes, collision detection, and index
 updates used by neat-memory-capture and neat-memory-recall.
-
-## Atomic Counter Increment
-
-Used during memory capture to get next available ID.
-
-**Pattern:**
-
-```javascript
-function incrementCounter(type) {
-  const counterPath = '.index/counters.json'
-  
-  // 1. Read current counters
-  let counters = readJSON(counterPath) || {
-    preferences: 0,
-    patterns: 0,
-    solutions: 0,
-    lessons: 0
-  }
-  
-  // 2. Validate counter hasn't exceeded limit
-  if (counters[type] >= 999) {
-    throw new Error(`Counter limit reached for ${type}. Archive old memories.`)
-  }
-  
-  // 3. Increment
-  counters[type] += 1
-  const newCounter = counters[type]
-  
-  // 4. Write back immediately (before using counter)
-  writeJSON(counterPath, counters)
-  
-  return newCounter
-}
-```
-
-**Format:** 3-digit zero-padded (001-999)
-
-**Rollover:** Fail with error after 999, prompt user to archive
 
 ## Atomic Memory Write
 
-Write memory file, update index, with rollback on failure.
+Write memory file, update index, with collision detection.
 
 **Pattern:**
 
 ```javascript
 function writeMemory(memory, type) {
   const typeDir = getTypeDirectory(type) // preferences/, patterns/, etc.
-  const filename = `${memory.id}_${slugify(memory.title)}.json`
+  const slug = slugify(memory.title)
+  const id = `${getTypePrefix(type)}_${slug}`
+  const filename = `${id}.json`
   const filePath = `${typeDir}/${filename}`
   const indexPath = '.index/index.json'
   
+  // Check for filename collision
+  if (fileExists(filePath)) {
+    const existingMemory = readJSON(filePath)
+    
+    // Calculate overlap (use shared/duplicate-detection.md logic)
+    const overlapScore = calculateOverlap(memory, existingMemory)
+    
+    if (overlapScore >= 0.75) {
+      // Show duplicate UI and get user choice
+      const choice = showDuplicateUI([existingMemory], memory)
+      return handleDuplicateChoice(choice, existingMemory, memory, filePath, indexPath)
+    }
+    
+    // Check for conflict (use shared/conflict-detection.md logic)
+    const isConflict = detectConflict(memory, existingMemory)
+    
+    if (isConflict) {
+      // Show conflict UI and get user choice
+      const choice = showConflictUI([existingMemory], memory)
+      return handleConflictChoice(choice, existingMemory, memory, filePath, indexPath)
+    }
+    
+    // Same filename but not duplicate/conflict - collision
+    const choice = showCollisionUI(existingMemory, memory)
+    return handleCollisionChoice(choice, existingMemory, memory, filePath, indexPath)
+  }
+  
   try {
     // 1. Write memory file
+    memory.id = id
     writeJSON(filePath, memory)
     
     // 2. Update index
@@ -76,27 +68,18 @@ function writeMemory(memory, type) {
       deleteFile(filePath)
     }
     
-    // Decrement counter
-    decrementCounter(type)
-    
     throw new Error(`Failed to write memory: ${error.message}`)
   }
-}
-
-function decrementCounter(type) {
-  const counterPath = '.index/counters.json'
-  let counters = readJSON(counterPath)
-  counters[type] -= 1
-  writeJSON(counterPath, counters)
 }
 ```
 
 **Key principles:**
 
-- Counter increment BEFORE filename creation
+- Check filename collision BEFORE write
+- Trigger overlap/conflict detection on collision
 - Memory file write BEFORE index update
-- Rollback on any failure (delete file, decrement counter)
-- file_path in index is relative to memory root (e.g., `patterns/pat_012_sql-before-cache.json`)
+- Rollback on failure (delete file only, no counter to decrement)
+- file_path in index is relative to memory root (e.g., `patterns/pat_sql_before_cache.json`)
 
 ## Safe Memory Load
 
@@ -193,7 +176,8 @@ function deleteFile(path) {
 
 function slugify(text) {
   return text.toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '')
+    .replace(/_+/g, '_')
 }
 ```
