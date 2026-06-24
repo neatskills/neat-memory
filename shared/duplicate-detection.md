@@ -58,13 +58,13 @@ Found memories about [topic]:
 
 ━━━ Duplicates Detected ━━━
 
-[1] pat_012 - SQL Optimization Before Caching
+[1] pat_sql_optimization_before_caching - SQL Optimization Before Caching
     Created: 2026-06-24 | Activated: 3 times
-    Tags: [performance, database, optimization] | Location: patterns/pat_012_sql-before-cache.json
+    Tags: [performance, database, optimization] | Location: patterns/pat_sql_optimization_before_caching.json
     
-[2] pat_015 - Optimize Queries Before Adding Cache
+[2] pat_optimize_queries_before_cache - Optimize Queries Before Adding Cache
     Created: 2026-06-25 | Activated: 1 times
-    Tags: [performance, sql, caching] | Location: patterns/pat_015_optimize-queries-cache.json
+    Tags: [performance, sql, caching] | Location: patterns/pat_optimize_queries_before_cache.json
 
 [If 3+ memories, show all numbered]
     
