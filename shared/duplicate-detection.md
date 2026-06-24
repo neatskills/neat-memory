@@ -5,51 +5,24 @@ Shared logic for neat-memory-recall (Step 3-4) and neat-memory-cleanup
 
 ## Calculate Overlap
 
-```javascript
-function calculateOverlap(mem1, mem2) {
-  let score = 0.0
-  
-  // Tag (40%), Trigger (30%), Content similarity (30%)
-  const tagOverlap = intersection(mem1.tags, mem2.tags).length /
-    union(mem1.tags, mem2.tags).length
-  const triggerOverlap = intersection(mem1.intent_triggers,
-    mem2.intent_triggers).length /
-    union(mem1.intent_triggers, mem2.intent_triggers).length
-  const contentSimilarity = calculateContentSimilarity(mem1.content,
-    mem2.content)
-  
-  return (tagOverlap * 0.4) + (triggerOverlap * 0.3) + (contentSimilarity * 0.3)
-}
+Calculate similarity score between two memories:
 
-function categorizeOverlap(score) {
-  if (score >= 0.75) return "high_overlap"    // Very similar
-  if (score >= 0.50) return "medium_overlap"  // Related
-  return "low_overlap"                        // Independent
-}
-```
+1. Tag overlap: intersection size / union size (40% weight)
+2. Trigger overlap: intersection size / union size (30% weight)
+3. Content similarity: text comparison algorithm (30% weight)
+4. Final score: weighted sum of all three
 
-**Only ≥75% is duplicate.**
+**Categorization:**
+
+- ≥0.75 = high overlap (duplicate)
+- ≥0.50 = medium overlap (related)
+- <0.50 = low overlap (independent)
+
+**Only ≥0.75 triggers duplicate handling.**
 
 ## Group Duplicates
 
-```javascript
-const groups = []
-for (const mem of memories) {
-  let addedToGroup = false
-  for (const group of groups) {
-    for (const groupMem of group) {
-      if (calculateOverlap(mem, groupMem) >= 0.75) {
-        group.push(mem)
-        addedToGroup = true
-        break
-      }
-    }
-    if (addedToGroup) break
-  }
-  if (!addedToGroup) groups.push([mem])
-}
-return groups.filter(g => g.length >= 2)
-```
+For each memory, check if it overlaps (≥0.75) with any member of existing groups. If yes, add to that group. If no, create new group. Return only groups with 2+ members (transitive grouping).
 
 ## User Choice UI
 
@@ -59,12 +32,14 @@ Found memories about [topic]:
 ━━━ Duplicates Detected ━━━
 
 [1] pat_sql_optimization_before_caching - SQL Optimization Before Caching
-    Created: 2026-06-24 | Activated: 3 times
-    Tags: [performance, database, optimization] | Location: patterns/pat_sql_optimization_before_caching.json
+    Created: 2026-06-24
+    Tags: [performance, database, optimization]
+    Location: patterns/pat_sql_optimization_before_caching.json
     
 [2] pat_optimize_queries_before_cache - Optimize Queries Before Adding Cache
-    Created: 2026-06-25 | Activated: 1 times
-    Tags: [performance, sql, caching] | Location: patterns/pat_optimize_queries_before_cache.json
+    Created: 2026-06-25
+    Tags: [performance, sql, caching]
+    Location: patterns/pat_optimize_queries_before_cache.json
 
 [If 3+ memories, show all numbered]
     
@@ -83,92 +58,35 @@ location), exact overlap %, 5 options (b/m/1/2/k)
 
 ### [b] Use Both
 
-```javascript
-const contents = duplicates.map(d => loadMemory(d.file_path))
-// In recall: synthesize from all
-// In cleanup: skip (no action)
-```
+Load all duplicate memories. In recall: synthesize from all. In manager: skip (no action).
 
 ### [m] Merge
 
-```javascript
-console.log("Merging:")
-duplicates.forEach(d => console.log(`- ${d.title}`))
-console.log("Which should be base? [1/2/...]: _")
-const base = duplicates[getUserInput() - 1]
-const mergedContent = combineContent(duplicates, base)
-console.log("Merged preview:\n", mergedContent,
-  "\n[y] Save  [e] Edit  [n] Cancel: _")
-if (confirmed) { /* Update base, delete others, update index */ }
-```
+1. Show list of duplicates being merged
+2. Ask which should be base (1/2/...)
+3. Combine content using merge algorithm
+4. Show preview with [y] Save / [e] Edit / [n] Cancel
+5. If confirmed: Update base file, delete others, update index
 
 ### [1], [2], [N] Use Only One
 
-```javascript
-const selected = duplicates[index - 1]
-// In recall: load and use only this one
-// In cleanup: delete others, keep selected
-```
+Select memory at index. In recall: load and use only selected. In manager: delete others, keep selected.
 
 ### [k] Keep Separate
 
-```javascript
-// In recall: synthesize from all without showing UI
-// In cleanup: no action, keep as-is
-```
+In recall: synthesize from all without re-showing UI. In manager: no action, keep as-is.
 
 ## Merge Algorithm
 
-```javascript
-function combineContent(duplicates, base) {
-  let merged = { ...base }
-  
-  // Combine tags (union)
-  const allTags = new Set()
-  duplicates.forEach(d => d.tags.forEach(t => allTags.add(t)))
-  merged.tags = Array.from(allTags)
-  
-  // Combine triggers (union)
-  const allTriggers = new Set()
-  duplicates.forEach(d =>
-    d.intent_triggers.forEach(t => allTriggers.add(t)))
-  merged.intent_triggers = Array.from(allTriggers)
-  
-  // Combine content (append unique parts)
-  merged.content = mergeTextContent(duplicates.map(d => d.content),
-    base.content)
-  
-  // Keep highest activation count
-  merged.activated_count = Math.max(...duplicates.map(d =>
-    d.activated_count))
-  
-  // Keep most recent activation
-  const activations = duplicates.filter(d => d.last_activated)
-    .map(d => new Date(d.last_activated))
-  if (activations.length > 0)
-    merged.last_activated = new Date(Math.max(...activations))
-      .toISOString()
-  
-  // Add merge metadata
-  merged.merged_from = duplicates.filter(d => d.id !== base.id)
-    .map(d => ({ id: d.id, title: d.title,
-      merged_date: new Date().toISOString() }))
-  
-  return merged
-}
+Start with base memory, then:
 
-function mergeTextContent(contents, baseContent) {
-  let result = baseContent
-  for (const content of contents) {
-    if (content === baseContent) continue
-    const paragraphs = content.split('\n\n')
-    for (const para of paragraphs) {
-      if (!result.includes(para.trim())) result += '\n\n' + para
-    }
-  }
-  return result.trim()
-}
-```
+1. **Combine tags:** Union of all tags across duplicates
+2. **Combine triggers:** Union of all intent_triggers across duplicates
+3. **Merge content:** Keep base content, append unique paragraphs from other duplicates (split on double newline, check inclusion)
+4. **Keep earliest creation:** Minimum creation timestamp across all duplicates
+5. **Add merge metadata:** Store merged_from array with id, title, merged_date for each non-base duplicate
+
+Return merged memory object.
 
 ## Common Mistakes
 

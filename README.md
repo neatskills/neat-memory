@@ -1,169 +1,96 @@
 # Neat Memory
 
-Cross-session memory system for Claude Code. Captures experience from
-conversations and recalls it in future sessions, providing continuity
-across work.
+Cross-session memory for Claude Code. Capture experience from conversations, recall it in future sessions.
 
-## The Problem
-
-```text
-Session 1: User fixes bug → captures solution
-Session 2: NEW session, Claude has zero context → re-explains
-```
-
-vs.
-
-```text
-Session 1: User fixes bug → captures memory
-Session 2: Claude recalls memory → "I recall we fixed this before..."
-```
-
-## Features
-
-**Cross-Session Continuity** - Memories persist beyond single
-conversations
-**Two Storage Scopes** - Global (personal patterns) + Project (team
-solutions)
-**Duplicate Detection** - Handles overlapping memories at query time
-**Context-Efficient Recall** - Subagent pattern minimizes main context
-impact
-**JSON Schema** - Structured, validated memory format
-
-## Skills
-
-- **neat-memory-capture** - Extract and save session experience as
-  structured memories
-- **neat-memory-recall** - Query memories with duplicate/conflict
-  detection and synthesis (uses subagent for efficiency)
-
-## Install
+## Quick Start
 
 ```bash
 git clone https://github.com/neatskills/neat-memory.git
 cd neat-memory
-./scripts/manage-skills.sh  # Defaults to install
+./scripts/manage-skills.sh
 ```
 
-To uninstall:
+Then use:
+- `/neat-memory-capture` - After solving problems or discovering patterns
+- `/neat-memory-recall "query"` - Query domain-specific experience (when auto-memory is insufficient)
+- `/neat-memory-manager` - Manage quality: merge duplicates, resolve conflicts, promote/demote between systems
 
-```bash
-./scripts/manage-skills.sh uninstall
-```
+## vs. Auto-Memory
 
-## Usage
+Claude Code has built-in auto-memory (`~/.claude/memory/`). neat-memory uses the **same format** but adds:
 
-### Capture Memory
+| | Auto-Memory | neat-memory |
+|---|---|---|
+| **When** | Always loaded | On-demand via `/neat-memory-recall` |
+| **Best for** | Who you are, preferences, current work | Detailed patterns, solutions, lessons |
+| **Size** | <300 words | 300-500 words |
+| **Format** | `name`, `description`, `metadata.type` | Same + `neat_type`, `tags`, `triggers` |
+| **Scope** | Broad, most responses | Domain-specific, when relevant |
+| **Management** | Auto-managed by Claude Code | User-curated via `/neat-memory-manager` |
 
-```bash
-# After solving a problem or learning something:
-/neat-memory-capture
+**Same format, different depth:**
+- Auto-memory: "Use TDD for skills" (50 words, always-on)
+- neat-memory: "TDD Methodology: RED/GREEN/REFACTOR phases, reference docs..." (500 words, TDD queries only)
 
-# Choose type:
-#   1. Preference - Personal style (global)
-#   2. Pattern - Reusable principle (global)
-#   3. Solution - What works here (project)
-#   4. Lesson - What doesn't work here (project)
-
-# Review preview, confirm, done!
-```
-
-### Recall Memory
-
-```bash
-# Query past experience:
-/neat-memory-recall "How did we handle API performance?"
-
-# System:
-# - Searches global + project memories (lightweight index search)
-# - Dispatches subagent to minimize context impact
-# - Subagent: loads files, detects conflicts/duplicates, handles UI
-# - Asks you how to handle conflicts/duplicates
-# - Synthesizes answer from selected memories
-# - Shows which memories were used
-# - Main context only receives compact synthesized answer
-```
+**neat-memory-manager** syncs both systems:
+- Consolidates related memories before promotion (5 → 1 file)
+- Promotes neat global → auto global (≤300 words)
+- Demotes auto global → neat global (>400 words, detailed)
+- Detects cross-system duplicates
+- Note: Auto-memory project excluded (auto-managed by Claude Code)
 
 ## Memory Types
 
-| Type | Location | Purpose | Example |
-| -------------- | -------- | --------------------- | --------------------- |
-| **Preference** | Global | Personal style | "I prefer verbose" |
-| **Pattern** | Global | Universal principle | "Optimize SQL first" |
-| **Solution** | Project | What works here | "Use Zustand" |
-| **Lesson** | Project | What doesn't work | "Redis races" |
+| Type | Auto-memory type | Location | Example |
+|---|---|---|---|
+| **Preference** | feedback | Global (`~/.claude/neat_memory/`) | "I prefer verbose logging" |
+| **Pattern** | feedback | Global | "Optimize SQL before caching" |
+| **Solution** | project | Project (`.claude/neat_memory/`) | "Use Zustand for state" |
+| **Lesson** | project | Project | "Don't use Redis for sessions - race conditions" |
 
-**Global** (`~/.claude/neat_memory/`) - Your personal cross-project
-knowledge
-**Project** (`{project}/.claude/neat_memory/`) - Team-shared project
-knowledge
+**Format:** Auto-memory compatible markdown (name, description, metadata.type)
 
-## Directory Structure
+**Naming:** kebab-case (`sql-before-cache.md`, not `sql_before_cache.md`)
 
-### Global (Personal)
+Schema: [memory-schema.md](neat-memory-capture/references/memory-schema.md)
 
-```text
-~/.claude/neat_memory/
-  preferences/
-    pref_verbose_logging.json
-  patterns/
-    pat_sql_before_cache.json
-  .index/
-    index.json
+## Example Memory
+
+```markdown
+---
+name: sql-before-cache
+description: Optimize SQL queries before adding caching layers
+metadata:
+  type: feedback
+  neat_type: pattern
+  tags: [performance, database, optimization]
+  intent_triggers: [performance, slow, latency]
+  created: 2026-06-24T10:30:00Z
+  promoted: false
+---
+
+When facing API latency, always optimize queries first.
+
+**Why:** Caching masks symptoms; optimization fixes root causes.
+
+**How to apply:**
+1. Profile queries
+2. Fix N+1 queries
+3. Add indexes
+4. Then cache
 ```
 
-### Project (Team)
+## Migration
 
-```text
-{project}/.claude/neat_memory/
-  solutions/
-    sol_zustand_state.json
-  lessons/
-    les_redis_sessions_unsafe.json
-  .index/
-    index.json
+If you have existing memories in old format:
+
+```bash
+./scripts/migrate-to-auto-format.sh --dry-run  # Preview
+./scripts/migrate-to-auto-format.sh            # Execute
+./scripts/rebuild-index.sh                     # Rebuild index
 ```
 
-## Memory Schema
-
-Memories are stored as JSON with strict schema:
-
-```json
-{
-  "id": "pat_sql_before_cache",
-  "type": "pattern",
-  "title": "SQL Optimization Before Caching",
-  "created": "2026-06-24T10:30:00Z",
-  "tags": ["performance", "database", "optimization"],
-  "intent_triggers": ["performance", "slow", "latency"],
-  "content": "When facing API latency...",
-  "source_session": {
-    "date": "2026-06-24",
-    "context": "API performance debugging"
-  }
-}
-```
-
-See [memory-schema.md](neat-memory-capture/references/memory-schema.md)
-for complete schema.
-
-## Design Principles
-
-1. **Fast capture** - Minimal friction to save knowledge
-2. **User control** - Never auto-merge, auto-delete, or hide
-   conflicts/duplicates
-3. **Transparency** - Always show which memories were used
-4. **DRY** - Shared logic for duplicate and conflict detection
-   (no duplication)
-5. **Team-friendly** - Project memories git-versioned for collaboration
-6. **Context-efficient** - Subagent pattern keeps main context clean
-7. **Simple** - No usage tracking overhead, just pure knowledge storage
-
-## Development Status
-
-- [x] Skill design and testing
-- [ ] Installation script
-- [ ] Git integration guide
-- [ ] Migration from other systems
+Backs up originals as `.backup` files.
 
 ## License
 

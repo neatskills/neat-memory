@@ -1,25 +1,50 @@
 ---
 name: neat-memory-recall
-description: Use when user asks about past experience, approaches, or
-  lessons - queries memories with duplicate detection and synthesis
+description: Use when user asks about past experience, approaches, or lessons - queries memories with duplicate detection and synthesis. Only invoke when auto-memory is insufficient and query is domain-specific.
 ---
 
 # Memory Recall
 
-**Role:** Search memories and synthesize coherent answers.
+Search memories and synthesize coherent answers.
 
-## Memory Types and Prefixes
+## Recall Decision Tree
 
-| Type | Prefix | Location | Purpose |
-| -------------- | ------ | -------- | ---------------------- |
-| **Preference** | pref | Global | Personal style/workflow |
-| **Pattern** | pat | Global | Universal principle |
-| **Solution** | sol | Project | What works here |
-| **Lesson** | les | Project | What doesn't work |
+**Before invoking this skill, check:**
 
-**ID format:** `{prefix}_{slug}` (e.g., `pat_sql_optimization_before_caching`, `sol_use_zustand`)
+1. **Is this answered by auto-memory?**
+   - Auto-memory loads automatically via semantic similarity
+   - Check context for existing auto-memory content
+   - If yes → Use that, don't invoke
 
-*See [../shared/file-operations.md](../shared/file-operations.md) for load patterns and type mappings.*
+2. **Is this conversation context?**
+   - Recent messages in this session
+   - If yes → Reference conversation history, don't invoke
+
+3. **Is this domain-specific knowledge?**
+   - Patterns, solutions, lessons
+   - Detailed "how we solved X"
+   - If no → Web search or ask clarification
+
+4. **User explicitly asked?**
+   - "Check neat-memory", "recall solution", "how did we handle"
+   - If yes → Always invoke
+
+**Only invoke if:** #3 YES or #4 YES
+
+## Memory Types
+
+| Type | Location | Purpose |
+| -------------- | -------- | ---------------------- |
+| **Preference** | Global | Personal style/workflow |
+| **Pattern** | Global | Universal principle |
+| **Solution** | Project | What works here |
+| **Lesson** | Project | What doesn't work |
+
+**Format:** Markdown with YAML frontmatter (`.md` files)
+
+**Filename:** `{slug}.md` (e.g., `sql-optimization-before-caching.md`, `use-zustand.md`)
+
+*See [../shared/file-operations.md](../shared/file-operations.md) for load patterns.*
 
 ## When to Use
 
@@ -53,17 +78,24 @@ User asks about past experience, approaches, or lessons:
 2. Match against: `intent_triggers`, `tags`, `title`
 3. Read `.index/index.json`, filter, sort by relevance, return top 10
 
+**If index missing:**
+
+```text
+No memories found yet. Capture some with /neat-memory-capture
+```
+
 ### Step 3: Dispatch Recall Subagent
 
 **Subagent input:**
 
-- Memory IDs from Step 2
+- Memory names/files from Step 2
 - Original query keywords
 - Scope (global/project)
 
 **Subagent responsibilities:**
 
-- Load full memory JSON files
+- Load full memory markdown files
+- Parse YAML frontmatter
 - Detect duplicates and conflicts (Steps 4a-4b)
 - Handle user interactions (duplicate/conflict UI)
 - Synthesize answer (Step 6)
@@ -71,7 +103,7 @@ User asks about past experience, approaches, or lessons:
 
 **Error handling contract:**
 
-- JSON.parse fails: Log warning, skip memory, continue
+- Frontmatter parse fails: Log warning, skip memory, continue
 - File missing: Log warning, skip memory, continue
 - No valid memories: Return "No valid memories found"
 
@@ -122,10 +154,10 @@ Use `../shared/duplicate-detection.md` for UI:
 ━━━ Duplicates Detected ━━━
 
 [1] mem_id - Title
-    Created: date | Activated: N times | Tags: [tags]
+    Created: date | Tags: [tags]
     Location: path
 [2] mem_id - Title
-    Created: date | Activated: N times | Tags: [tags]
+    Created: date | Tags: [tags]
     Location: path
 
 These overlap significantly (XX% similar).
@@ -143,10 +175,11 @@ implementation (path relative to skill directory).
 
 **Load process:**
 
-1. Read JSON file from path in index
-2. Parse with try/catch (skip on error, log warning)
-3. Validate required fields exist
-4. Return memory content for synthesis
+1. Read markdown file from path in index
+2. Parse YAML frontmatter with try/catch (skip on error, log warning)
+3. Extract markdown body
+4. Validate required frontmatter fields exist
+5. Return memory content for synthesis
 
 ### Step 6: Synthesize Answer
 
@@ -154,8 +187,8 @@ implementation (path relative to skill directory).
 [Synthesized answer using memory content]
 
 ━━━ Memories Used ━━━
-• pat_sql_optimization_before_caching - SQL Optimization Before Caching
-• les_redis_caching_masked_root_cause - Redis Caching Masked Root Cause
+• sql-optimization-before-caching - SQL Optimization Before Caching
+• redis-caching-masked-root-cause - Redis Caching Masked Root Cause
 
 [If merged:] Note: Merged 2 similar memories about SQL optimization.
 ```

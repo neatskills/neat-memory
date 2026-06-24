@@ -12,6 +12,13 @@ SKILL_PREFIX="neat-memory-"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 dst="$HOME/.claude/skills"
 
+# Check if symlink points to this project's skill directory
+is_managed_symlink() {
+  local target_path="$1"
+  local source_path="$2"
+  [ -L "$target_path" ] && [ "$(realpath "$target_path" 2>/dev/null)" = "$(realpath "$source_path")" ]
+}
+
 if [ "$mode" = "install" ]; then
   mkdir -p "$dst"
 fi
@@ -26,12 +33,8 @@ for src in "$root"/${SKILL_PREFIX}*; do
     continue
   fi
 
-  src_real="$(realpath "$src")"
-  dst_real="$(realpath "$dst/$name" 2>/dev/null || echo "")"
-
   if [ "$mode" = "install" ]; then
-    # Skip if already correctly installed (symlink pointing to this source)
-    if [ -L "$dst/$name" ] && [ "$dst_real" = "$src_real" ]; then
+    if is_managed_symlink "$dst/$name" "$src"; then
       echo "INFO: $name already installed — skipping"
       continue
     elif [ -e "$dst/$name" ]; then
@@ -42,8 +45,7 @@ for src in "$root"/${SKILL_PREFIX}*; do
     ln -s "$src" "$dst/$name" && echo "INFO: $name installed"
 
   else  # uninstall
-    # Only remove if it's a symlink installed by this project
-    if [ -L "$dst/$name" ] && [ "$dst_real" = "$src_real" ]; then
+    if is_managed_symlink "$dst/$name" "$src"; then
       rm "$dst/$name" && echo "INFO: $name uninstalled"
     elif [ -e "$dst/$name" ]; then
       echo "WARN: $name exists but was not installed by this project — skipping"
@@ -52,3 +54,8 @@ for src in "$root"/${SKILL_PREFIX}*; do
     fi
   fi
 done
+
+# Clean up empty directory after uninstall
+if [ "$mode" = "uninstall" ] && [ -d "$dst" ] && [ -z "$(ls -A "$dst")" ]; then
+  rmdir "$dst" && echo "INFO: Removed empty directory $dst"
+fi

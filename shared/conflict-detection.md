@@ -19,48 +19,20 @@ masked root cause"` → Complementary
 
 ## Detect Conflicts
 
-```javascript
-function detectConflict(mem1, mem2) {
-  // 1. Must have overlapping domain (tags/triggers)
-  const domainOverlap = intersection(mem1.tags, mem2.tags).length > 0
-    || intersection(mem1.intent_triggers,
-      mem2.intent_triggers).length > 0
-  if (!domainOverlap) return false
-  
-  // 2. Must be same type (cross-type conflicts NOT flagged -
-  // solutions can override global preferences)
-  if (mem1.type !== mem2.type) return false
-  
-  // 3. Must have contradictory indicators
-  const contradictoryPairs = [
-    ['prefer', 'avoid'], ['use', "don't use"], ['always', 'never'],
-    ['enable', 'disable'], ['verbose', 'minimal'],
-    ['detailed', 'concise'], ['yes', 'no']
-  ]
-  
-  for (const [word1, word2] of contradictoryPairs) {
-    const mem1Has = containsWord(mem1.content, word1)
-      || containsWord(mem1.title, word1)
-    const mem2Has = containsWord(mem2.content, word2)
-      || containsWord(mem2.title, word2)
-    if (mem1Has && mem2Has) return true
-    
-    const mem1HasOpposite = containsWord(mem1.content, word2)
-      || containsWord(mem1.title, word2)
-    const mem2HasOpposite = containsWord(mem2.content, word1)
-      || containsWord(mem2.title, word1)
-    if (mem1HasOpposite && mem2HasOpposite) return true
-  }
-  return false
-}
+Three conditions must all be true:
 
-function containsWord(text, word) {
-  return new RegExp(`\\b${word}\\b`, 'i').test(text)
-}
-```
+1. **Overlapping domain:** Memories share at least one tag OR intent_trigger
+2. **Same type:** Both same memory type (cross-type conflicts ignored - project solutions can override global preferences)
+3. **Contradictory keywords:** At least one contradictory pair found in title/content
 
-**Only flag strong conflicts** (clear contradiction with opposite
-keywords)
+**Contradictory pairs:**
+
+- prefer/avoid, use/don't use, always/never, enable/disable
+- verbose/minimal, detailed/concise, yes/no
+
+Check using word boundary regex (case-insensitive).
+
+**Only flag strong conflicts** with clear opposite keywords.
 
 ## User Choice UI
 
@@ -68,13 +40,13 @@ keywords)
 ⚠️ Found contradicting memories:
 
 [1] pref_verbose_error_logs - Verbose Error Logging
-    Created: 2026-01-15 | Activated: 5 times
+    Created: 2026-01-15
     Content: "I prefer verbose error logging with stack traces..."
     Tags: [logging, debugging, errors]
     Location: preferences/pref_verbose_error_logs.json
     
 [2] pref_minimal_logging - Minimal Logging
-    Created: 2026-05-20 | Activated: 3 times
+    Created: 2026-05-20
     Content: "I prefer minimal logging to reduce noise..."
     Tags: [logging, production, performance]
     Location: preferences/pref_minimal_logging.json
@@ -82,8 +54,10 @@ keywords)
 These contradict each other about logging preferences.
 
 Which applies now?
-  [1] Use pref_verbose_error_logs (verbose)  [2] Use pref_minimal_logging (minimal)  
-  [b] Show both (decide by context)  [d] Delete one (resolve permanently)  
+  [1] Use pref_verbose_error_logs (verbose)
+  [2] Use pref_minimal_logging (minimal)
+  [b] Show both (decide by context)
+  [d] Delete one (resolve permanently)
   [k] Keep both (apply in different contexts)
 
 Choose: _
@@ -93,43 +67,19 @@ Choose: _
 
 ### [1] or [2] - Use One
 
-```javascript
-const selected = memories[index - 1]
-// In recall: Use only selected for synthesis
-// In cleanup: Offer to delete other
-if (inCleanup && confirmed) {
-  console.log(`Delete ${memories[1 - index].id}? [y/n]: _`)
-  if (confirmed) deleteMemory(memories[1 - index])
-}
-```
+Select memory at index. In recall: Use only selected for synthesis. In manager: Offer to delete the other, confirm before deletion.
 
 ### [b] - Show Both
 
-```javascript
-// In recall: Synthesize showing both perspectives with caveat
-// In cleanup: No action
-```
+In recall: Synthesize showing both perspectives with caveat about contradiction. In manager: No action taken.
 
 ### [d] - Delete One
 
-```javascript
-console.log("Which to delete?\n[1] Delete pref_verbose_error_logs\n[2] Delete pref_minimal_logging\n[n] Cancel")
-const choice = getUserInput()
-if (choice !== 'n') deleteMemory(memories[parseInt(choice) - 1])
-```
+Ask which to delete (1/2/n for cancel). If not cancelled, delete selected memory file and update index.
 
 ### [k] - Keep Both
 
-```javascript
-console.log("Add context note to clarify when each applies? [y/n]: _")
-if (yes) {
-  console.log("When does pref_verbose_error_logs apply?: _")
-  memory1.context += `\n\nApplies when: ${getUserInput()}`
-  console.log("When does pref_minimal_logging apply?: _")
-  memory2.context += `\n\nApplies when: ${getUserInput()}`
-  saveMemory(memory1); saveMemory(memory2)
-}
-```
+Ask if user wants to add context notes. If yes, prompt for "When does X apply?" for each memory, append to context field, save both files.
 
 ## Conflict vs Duplicate
 

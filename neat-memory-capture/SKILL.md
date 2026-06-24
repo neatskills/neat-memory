@@ -1,12 +1,12 @@
 ---
 name: neat-memory-capture
 description: Use after solving problems, making decisions, or discovering
-  patterns - captures experience as JSON memories for cross-session recall
+  patterns - captures experience as markdown memories for cross-session recall
 ---
 
 # Memory Capture
 
-**Role:** Capture reusable experience as structured memories.
+Capture reusable experience as structured memories.
 
 ## When to Use
 
@@ -23,20 +23,22 @@ temporary notes
 
 ## Memory Types
 
-| Type | Prefix | Location | Purpose | Soft Limit |
-| -------------- | ------ | -------- | ---------------------- | ---------- |
-| **Preference** | pref | Global | Personal style/workflow | 200 |
-| **Pattern** | pat | Global | Universal principle | 200 |
-| **Solution** | sol | Project | What works here | 150 |
-| **Lesson** | les | Project | What doesn't work | 150 |
+| Type | Location | Purpose | Soft Limit |
+| -------------- | -------- | ---------------------- | ---------- |
+| **Preference** | Global | Personal style/workflow | 200 |
+| **Pattern** | Global | Universal principle | 200 |
+| **Solution** | Project | What works here | 150 |
+| **Lesson** | Project | What doesn't work | 150 |
 
 Global = `~/.claude/neat_memory/`; Project = `{project}/.claude/neat_memory/`
 
-**ID:** `{prefix}_{slug}` (e.g., `pat_sql_before_cache`)
+**Format:** Markdown with YAML frontmatter (same as auto-memory)
+
+**Filename:** `{slug}.md` (e.g., `sql-before-cache.md`)
 
 **Soft Limits:** Non-blocking recommendations. User can save anyway, raise limit, or cleanup.
 
-*See [../shared/file-operations.md](../shared/file-operations.md) for atomic writes.*
+*See [../shared/file-operations.md](../shared/file-operations.md) for atomic writes and [references/memory-schema.md](references/memory-schema.md) for complete schema.*
 
 ## Process
 
@@ -59,15 +61,30 @@ Choose [1-5]: _
 
 ### Step 3: Extract Content
 
-**Title:** 3-7 words | **Content:** 200-500 words (WHY, examples,
-metrics) | **Context:** Why/when | **Tags:** 3-7 | **Triggers:** 3-5
+**Title:** 3-7 words
+**Content:** 200-500 words with **Why:** and **How to apply:** sections
+**Tags:** 3-7 keywords (YAML array format)
+**Triggers:** 3-5 search terms (YAML array format)
+**Context:** Why/when discovered (goes in markdown body)
+
+Generate markdown with YAML frontmatter (see [references/memory-schema.md](references/memory-schema.md))
 
 ### Step 4: Generate Preview
 
 ```text
-Title: [title] | Type: [type] | Tags: [tags]
-Triggers: [triggers]
-Content: [First 300 chars...] | Location: [path]
+━━━ Memory Preview ━━━
+
+Title: SQL Optimization Before Caching
+Type: pattern
+Tags: [performance, database, optimization]
+Triggers: [performance, slow, latency]
+Location: ~/.claude/neat_memory/patterns/sql-before-cache.md
+
+Content preview:
+When facing API latency, always optimize database queries...
+
+**Why:** Caching masks symptoms; query optimization fixes root causes...
+
 [y] Save  [e] Edit  [c] Change type  [n] Cancel: _
 ```
 
@@ -78,17 +95,17 @@ Content: [First 300 chars...] | Location: [path]
 
 ### Step 5.5: Check Filename Collision
 
-**Generate ID and check for collision:**
+**Generate slug from title and check for collision:**
 
 ```text
 Checking for existing memory with same name...
 ```
 
-**If filename exists:**
+**If filename exists (e.g., `sql-before-cache.md`):**
 
 1. Load existing memory from file
 2. Calculate overlap (reuse `shared/duplicate-detection.md` logic)
-3. If overlap >= 75%: Show duplicate UI
+3. If overlap >= 0.75 (75% similar): Show duplicate UI
 4. Else: Check conflict (reuse `shared/conflict-detection.md` logic)
 5. If conflict: Show conflict UI
 6. Else: Show collision UI (same name, different content)
@@ -98,11 +115,11 @@ Checking for existing memory with same name...
 ```text
 ━━━ Duplicates Detected ━━━
 
-[1] pat_sql_before_cache - SQL Before Cache (existing)
-    Created: 2026-06-20 | Activated: 5 times
+[1] sql-before-cache.md - SQL Before Cache (existing)
+    Created: 2026-06-20
     Content: "When facing API latency..."
     
-[2] pat_sql_before_cache - SQL Optimization Before Caching (new)
+[2] sql-optimization-before-caching - SQL Optimization Before Caching (new)
     Content: "Always optimize database queries..."
 
 These overlap significantly (85% similar).
@@ -114,6 +131,7 @@ Choose: _
 ```
 
 **Handle choices:**
+
 - `[b]`: Keep existing, ask for alternate title for new → regenerate slug → retry save
 - `[m]`: Merge using existing algorithm, update existing file
 - `[1]`: Cancel save, keep existing
@@ -127,8 +145,8 @@ Choose: _
 ```text
 ⚠️ A memory already exists with this name but has different content.
 
-Existing: pat_test - Test Memory
-New: pat_test - Test Function
+Existing: test.md - Test Memory
+New: test.md - Test Function
 
   [r] Replace existing  [k] Keep both (rename new)  [c] Cancel
   
@@ -139,47 +157,79 @@ Choose: _
 
 ### Step 6: Save Memory
 
-**Filename:** `{prefix}_{slug}.json`
+**Ensure type directory exists** (e.g., `preferences/`, `patterns/`). Create if missing.
 
-**Slug:** Generated from title using slugify:
+**Filename:** `{slug}.md`
+
+**Slug:** Generated from title using kebab-case:
+
 - Lowercase
-- Replace non-alphanumeric with underscore
-- Remove leading/trailing underscores
-- Collapse multiple underscores to single
+- Replace spaces and non-alphanumeric with hyphens
+- Remove leading/trailing hyphens
+- Collapse multiple hyphens to single
 
-**JSON schema:**
+Example: "SQL Optimization Before Caching" → `sql-optimization-before-caching.md`
 
-```json
-{
-  "id": "pat_sql_before_cache",
-  "type": "pattern",
-  "title": "SQL Optimization Before Caching",
-  "created": "2026-06-24T10:30:00Z",
-  "tags": ["performance", "database", "optimization"],
-  "intent_triggers": ["performance", "slow", "latency"],
-  "content": "When facing API latency...",
-  "source_session": {"date": "2026-06-24", "context": "API debugging"},
-  "context": "Discovered during debugging.",
-  "relationships": [],
-  "merged_from": []
-}
+**Markdown format (auto-memory compatible):**
+
+```markdown
+---
+name: sql-optimization-before-caching
+description: Optimize SQL queries before adding caching layers
+metadata:
+  type: feedback
+  neat_type: pattern
+  tags: [performance, database, optimization]
+  intent_triggers: [performance, slow, latency]
+  created: 2026-06-24T10:30:00Z
+  promoted: false
+---
+
+When facing API latency, always optimize database queries before adding caching layers.
+
+**Why:** Caching masks symptoms; query optimization fixes root causes.
+
+**How to apply:**
+1. Profile to identify slow queries
+2. Check for N+1 queries
+3. Verify indexes exist
+4. Only add caching after optimization
+
+**Context:** Discovered during API performance debugging session.
+
+**Source:** 2026-06-24 - API debugging
 ```
 
 ### Step 7: Update Index
 
 **Order:** (1) Write memory file (2) Update index
 
-Update `.index/index.json`: `{ "pat_sql_before_cache": { title, type, tags, file_path } }`
+Update `.index/index.json`:
 
-**file_path:** Relative, not absolute (e.g., `patterns/pat_sql_before_cache.json`)
+```json
+{
+  "patterns": [
+    {
+      "file": "sql-optimization-before-caching.md",
+      "name": "sql-optimization-before-caching",
+      "description": "Optimize SQL queries before adding caching layers",
+      "tags": ["performance", "database", "optimization"],
+      "triggers": ["performance", "slow", "latency"],
+      "created": "2026-06-24T10:30:00Z"
+    }
+  ]
+}
+```
 
-**Rollback:** If index update fails, delete memory file (no counter to decrement)
+**file:** Relative path, not absolute (e.g., `sql-optimization-before-caching.md`)
+
+**Rollback:** If index update fails, delete memory file
 
 ### Step 8: Confirm
 
 ```text
-✓ Captured! Pattern (global) | ID: pat_sql_before_cache
-~/.claude/neat_memory/patterns/pat_sql_before_cache.json
+✓ Captured! Pattern (global)
+~/.claude/neat_memory/patterns/sql-optimization-before-caching.md
 ```
 
 ### Step 9: Check Soft Limits (after save)
@@ -196,6 +246,7 @@ Consider reviewing and deleting old files manually.
 ```
 
 **Track reminders:** `.index/cleanup_reminders.json` to avoid repeating every capture:
+
 ```json
 {
   "patterns": {

@@ -1,136 +1,143 @@
-# Memory JSON Schema
+# Memory Schema
 
-Complete schema for memory files stored in `neat_memory/` directories.
+Memories use **Claude Code auto-memory format** (markdown with YAML frontmatter) plus neat-memory extensions.
 
-## Schema Structure
+## Auto-Memory Compatible Format
 
-```json
-{
-  // ━━━ Required Fields ━━━
-  
-  // Identity
-  "id": "pat_sql_before_cache",              // Format: {prefix}_{slug} (pref|pat|sol|les)
-  "type": "pattern",            // preference | pattern | solution | lesson
-  "title": "Short Name",        // 3-7 words descriptive title
-  "created": "2026-06-24T10:30:00Z",  // ISO 8601 timestamp
-  
-  // Content
-  "tags": ["tag1", "tag2", "tag3"],        // 3-7 keywords
-  "intent_triggers": ["keyword1", "word2"], // 3-5 search triggers
-  "content": "Main insight and approach...", // 200-500 words
-  
-  // Source tracking
-  "source_session": {
-    "date": "2026-06-24",           // YYYY-MM-DD
-    "context": "What was being worked on"
-  },
-  
-  // ━━━ Optional Fields ━━━
-  
-  "context": "Background, why this matters",  // Additional context
-  
-  "relationships": [              // Links to related memories
-    {
-      "type": "extends",          // supersedes | applies | contradicts | extends
-      "id": "pat_profiling_first",           // Related memory ID
-      "reason": "Why they're related"  // Optional explanation
-    }
-  ],
-  
-  "merged_from": [                // Added when duplicates are merged
-    {
-      "id": "pat_query_batching",
-      "title": "Original title",
-      "merged_date": "2026-06-24T16:00:00Z"
-    }
-  ]
-}
+**Minimum (auto-memory compatible):**
+
+```markdown
+---
+name: sql-before-cache
+description: Optimize SQL queries before adding caching layers
+metadata:
+  type: feedback
+---
+
+Content with **Why:** and **How to apply:** sections.
 ```
 
-## Memory Types
+**Full (with neat-memory extensions):**
 
-| Type | Location | Purpose |
-| ------- | -------- | ------------------------------ |
-| `preference` | Global | Personal style/workflow |
-| `pattern` | Global | Universal reusable principle |
-| `solution` | Project | What works in this project |
-| `lesson` | Project | What doesn't work here |
+```markdown
+---
+name: sql-before-cache
+description: Optimize SQL queries before adding caching layers
+metadata:
+  type: feedback
+  neat_type: pattern
+  tags: [performance, database, optimization]
+  intent_triggers: [performance, slow, latency]
+  created: 2026-06-24T10:30:00Z
+  promoted: false
+---
 
-## File Naming Convention
-
-```text
-{prefix}_{slug}.json
-
-Examples:
-pref_verbose_logging.json
-pat_sql_before_cache.json
-sol_use_zustand_state.json
-les_redis_sessions_unsafe.json
+Content with **Why:** and **How to apply:** sections.
 ```
 
-## Complete Real-World Example
+## Type Mappings
 
-```json
-{
-  "id": "pat_sql_before_cache",
-  "type": "pattern",
-  "title": "SQL Optimization Before Caching",
-  "created": "2026-06-24T10:30:00Z",
-  "activated_count": 5,
-  "last_activated": "2026-06-24T15:20:00Z",
-  "tags": ["performance", "database", "optimization", "sql"],
-  "intent_triggers": ["performance", "slow", "latency"],
-  "content": "When facing API latency, always optimize database queries
-before adding caching layers. Profile to identify N+1 queries and
-missing indexes first. In one case, Redis caching improved response
-time by only 15%, while optimizing queries with batch loading improved
-it by 80%. Caching masks symptoms; query optimization fixes root
-causes.",
-  "context": "Discovered during API performance debugging session.
-Initially tried Redis caching first (quick win), but profiling revealed
-the real bottleneck was 50+ individual SELECT queries that could be
-batched.",
-  "source_session": {
-    "date": "2026-06-24",
-    "context": "API performance debugging"
-  },
-  "relationships": [
-    {
-      "type": "extends",
-      "id": "pat_profiling_first",
-      "reason": "Applies general profiling pattern to SQL specifically"
-    }
-  ]
-}
+| neat_type | Auto-memory type | Location | Purpose |
+|---|---|---|---|
+| preference | feedback | Global | Personal style/workflow |
+| pattern | feedback | Global | Universal principle |
+| solution | project | Project | What works here |
+| lesson | project | Project | What doesn't work |
+
+## File Naming
+
+**Format:** `{kebab-case-slug}.md`
+
+**Examples:** `verbose-logging.md`, `sql-before-cache.md`, `use-zustand-state.md`
+
+**Location:** Type subdirectory (`preferences/`, `patterns/`, `solutions/`, `lessons/`)
+
+## Complete Example
+
+**File:** `patterns/sql-before-cache.md`
+
+```markdown
+---
+name: sql-before-cache
+description: Optimize SQL queries before adding caching layers
+metadata:
+  type: feedback
+  neat_type: pattern
+  tags: [performance, database, optimization, sql]
+  intent_triggers: [performance, slow, latency]
+  created: 2026-06-24T10:30:00Z
+  promoted: false
+---
+
+When facing API latency, always optimize database queries before adding caching layers.
+
+**Why:** In one case, Redis caching improved response time by only 15%, while optimizing queries with batch loading improved it by 80%. Caching masks symptoms; query optimization fixes root causes.
+
+**How to apply:**
+1. Profile to identify slow queries
+2. Check for N+1 queries (batch them)
+3. Verify indexes exist
+4. Only add caching after query optimization
+
+**Context:** Discovered during API performance debugging. Initially tried Redis caching first, but profiling revealed the real bottleneck was 50+ individual SELECT queries.
+
+**Source:** 2026-06-24 - API performance debugging
+
+**Related:** Extends [[profiling-first]] pattern.
 ```
 
 ## Validation Rules
 
-**ID format:** `{prefix}_{slug}` where prefix is `pref|pat|sol|les` and
-slug is lowercase with underscores
+**name:** Kebab-case slug (`sql-before-cache`, `verbose-logging`)
 
-**Type values:** Must be exactly one of: `preference`, `pattern`,
-`solution`, `lesson`
+**description:** One-line summary (used by auto-memory for semantic retrieval)
 
-**Timestamps:** Must be valid ISO 8601 format with timezone
+**metadata.type:** `feedback` | `reference` | `project` | `user` (auto-memory types)
 
-**Arrays:** `tags` and `intent_triggers` must have at least 1 element
+**metadata.neat_type:** `preference` | `pattern` | `solution` | `lesson` (neat types)
 
-**Content:** Must be non-empty string
+**metadata.tags:** Array of 3-7 keywords
 
-**Activated count:** Must be >= 0
+**metadata.intent_triggers:** Array of 3-5 search terms
+
+**metadata.created:** ISO 8601 timestamp
+
+**metadata.promoted:** Boolean, defaults to false
+
+## Field Explanations
+
+**promoted:** Set to `true` when memory is copied to auto-memory (prevents re-promotion)
+
+**demoted_from_auto_memory:** Set to `true` when memory originated from auto-memory
+
+**consolidated_into:** Points to consolidated memory's name when merged
 
 ## Index Files
 
-### index.json
+Index stored at `.index/index.json`:
 
 ```json
 {
-  "pat_sql_before_cache": {
-    "title": "SQL Optimization Before Caching",
-    "type": "pattern",
-    "tags": ["performance", "database", "optimization"],
-    "file_path": "patterns/pat_sql_before_cache.json"
-  }
+  "preferences": [
+    {
+      "file": "verbose-logging.md",
+      "name": "verbose-logging",
+      "description": "Keep logs detailed for debugging",
+      "tags": ["logging", "debugging"],
+      "triggers": ["log", "debug"],
+      "created": "2026-06-24T10:30:00Z"
+    }
+  ],
+  "patterns": [],
+  "solutions": [],
+  "lessons": []
 }
+```
+
+## Auto-Memory MEMORY.md
+
+When promoted, also add to `~/.claude/memory/MEMORY.md`:
+
+```markdown
+- [SQL Before Cache](sql-before-cache.md) — Optimize queries before adding caching layers
 ```
