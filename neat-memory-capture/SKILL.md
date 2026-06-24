@@ -78,6 +78,9 @@ Content: [First 300 chars...] | Location: [path]
 
 ### Step 6: Save Memory
 
+**BEFORE saving:** Check if target directory exists by reading counters.json first.
+If counters.json exists, directories exist. DO NOT create directories blindly.
+
 **Filename:** `{type}_{counter}_{slug}.json`
 
 **Counter:** Read `.index/counters.json`, increment atomically.
@@ -162,6 +165,7 @@ User reviews files in their file manager/terminal. Index rebuilds automatically 
 
 | Mistake | Rule |
 | ------------------------- | ------------------------------------------------ |
+| Creating dirs before checking | Read counters.json first - if it exists, dirs exist |
 | Wrong location | Preference/Pattern → Global; Solution/Lesson → Project |
 | Wrong format | JSON, exact schema, type prefix |
 | Skipping confirmation | Show preview, get approval |
