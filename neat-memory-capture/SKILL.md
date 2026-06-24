@@ -32,7 +32,7 @@ temporary notes
 
 Global = `~/.claude/neat_memory/`; Project = `{project}/.claude/neat_memory/`
 
-**ID:** `{prefix}_{counter}` (e.g., `pat_012`, `pat_1000`)
+**ID:** `{prefix}_{slug}` (e.g., `pat_sql_before_cache`)
 
 **Soft Limits:** Non-blocking recommendations. User can save anyway, raise limit, or cleanup.
 
@@ -76,21 +76,82 @@ Content: [First 300 chars...] | Location: [path]
 **[y]:** Save | **[e]:** Edit fields → preview → Step 4 |
 **[c]:** Return to Step 2 | **[n]:** Cancel
 
+### Step 5.5: Check Filename Collision
+
+**Generate ID and check for collision:**
+
+```text
+Checking for existing memory with same name...
+```
+
+**If filename exists:**
+
+1. Load existing memory from file
+2. Calculate overlap (reuse `shared/duplicate-detection.md` logic)
+3. If overlap >= 75%: Show duplicate UI
+4. Else: Check conflict (reuse `shared/conflict-detection.md` logic)
+5. If conflict: Show conflict UI
+6. Else: Show collision UI (same name, different content)
+
+**Duplicate UI:**
+
+```text
+━━━ Duplicates Detected ━━━
+
+[1] pat_sql_before_cache - SQL Before Cache (existing)
+    Created: 2026-06-20 | Activated: 5 times
+    Content: "When facing API latency..."
+    
+[2] pat_sql_before_cache - SQL Optimization Before Caching (new)
+    Content: "Always optimize database queries..."
+
+These overlap significantly (85% similar).
+
+What should I do?
+  [b] Use both (rename new)  [m] Merge  [1] Use existing  [2] Replace with new  [k] Keep separate
+  
+Choose: _
+```
+
+**Handle choices:**
+- `[b]`: Keep existing, ask for alternate title for new → regenerate slug → retry save
+- `[m]`: Merge using existing algorithm, update existing file
+- `[1]`: Cancel save, keep existing
+- `[2]`: Delete existing, save new (replace)
+- `[k]`: Ask for alternate title → regenerate slug → retry save
+
+**Conflict UI:** (Use `shared/conflict-detection.md` UI)
+
+**Collision UI:** (rare - same slug, but not duplicate/conflict)
+
+```text
+⚠️ A memory already exists with this name but has different content.
+
+Existing: pat_test - Test Memory
+New: pat_test - Test Function
+
+  [r] Replace existing  [k] Keep both (rename new)  [c] Cancel
+  
+Choose: _
+```
+
+**If no collision:** Continue to Step 6.
+
 ### Step 6: Save Memory
 
-**BEFORE saving:** Check if target directory exists by reading counters.json first.
-If counters.json exists, directories exist. DO NOT create directories blindly.
+**Filename:** `{prefix}_{slug}.json`
 
-**Filename:** `{type}_{counter}_{slug}.json`
-
-**Counter:** Read `.index/counters.json`, increment atomically.
-Zero-padded to 3+ digits (001, 002, ... 999, 1000, 1001, ...). No limit.
+**Slug:** Generated from title using slugify:
+- Lowercase
+- Replace non-alphanumeric with underscore
+- Remove leading/trailing underscores
+- Collapse multiple underscores to single
 
 **JSON schema:**
 
 ```json
 {
-  "id": "pat_012",
+  "id": "pat_sql_before_cache",
   "type": "pattern",
   "title": "SQL Optimization Before Caching",
   "created": "2026-06-24T10:30:00Z",
@@ -106,16 +167,19 @@ Zero-padded to 3+ digits (001, 002, ... 999, 1000, 1001, ...). No limit.
 
 ### Step 7: Update Index
 
-**Atomic order:** (1) Increment counter (2) Write memory
-(3) Update index: `{ "pat_012": { title, type, tags, file_path } }`
+**Order:** (1) Write memory file (2) Update index
 
-**file_path:** Relative, not absolute. **Rollback:** Decrement counter if 2/3 fails.
+Update `.index/index.json`: `{ "pat_sql_before_cache": { title, type, tags, file_path } }`
+
+**file_path:** Relative, not absolute (e.g., `patterns/pat_sql_before_cache.json`)
+
+**Rollback:** If index update fails, delete memory file (no counter to decrement)
 
 ### Step 8: Confirm
 
 ```text
-✓ Captured! Pattern (global) | ID: pat_012
-~/.claude/neat_memory/patterns/pat_012_sql-before-cache.json
+✓ Captured! Pattern (global) | ID: pat_sql_before_cache
+~/.claude/neat_memory/patterns/pat_sql_before_cache.json
 ```
 
 ### Step 9: Check Soft Limits (after save)
@@ -158,23 +222,22 @@ User reviews files in their file manager/terminal. Index rebuilds automatically 
 | "User rushed, skip confirmation" | Prevents corruption |
 | "Obviously type X" | Can't read minds - ask |
 | "Save it, fix later" | Do it right now |
-| "Close to existing" | Always save new |
+| "Close to existing" | Always check collision |
 | "User said 'save everything'" | Content, not bypass |
 
 ## Common Mistakes
 
 | Mistake | Rule |
 | ------------------------- | ------------------------------------------------ |
-| Creating dirs before checking | Read counters.json first - if it exists, dirs exist |
 | Wrong location | Preference/Pattern → Global; Solution/Lesson → Project |
 | Wrong format | JSON, exact schema, type prefix |
 | Skipping confirmation | Show preview, get approval |
-| Missing counter | Update counters.json |
+| Skipping collision check | Always check filename exists before save |
 | Not self-contained | Explain WHY, not WHAT |
 
 ## Edge Cases
 
 **Multiple types:** Offer separate captures, user decides |
-**Counter missing:** Init at 0, first = `_001` |
+**Filename collision:** Trigger overlap/conflict detection, let user decide |
 **Index corrupt:** Rebuild from files, warn |
 **Duplicates:** Handled in recall, not capture
