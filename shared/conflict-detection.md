@@ -9,12 +9,12 @@ Memories with overlapping intent but contradictory guidance.
 
 **Examples:**
 
-- `pref_001: "verbose logging"` vs `pref_005: "minimal logging"` → Same
+- `pref_verbose_logging: "verbose logging"` vs `pref_minimal_logging: "minimal logging"` → Same
   domain, opposite advice
-- `sol_003: "Use Redux"` vs `sol_012: "Use Zustand"` → Same problem,
+- `sol_use_redux: "Use Redux"` vs `sol_use_zustand: "Use Zustand"` → Same problem,
   different solutions
 
-**NOT conflicts:** `pat_001: "SQL before cache"` + `les_001: "Redis
+**NOT conflicts:** `pat_sql_before_cache: "SQL before cache"` + `les_redis_masked_root_cause: "Redis
 masked root cause"` → Complementary
 
 ## Detect Conflicts
@@ -67,22 +67,22 @@ keywords)
 ```text
 ⚠️ Found contradicting memories:
 
-[1] pref_001 - Verbose Error Logging
+[1] pref_verbose_error_logs - Verbose Error Logging
     Created: 2026-01-15 | Activated: 5 times
     Content: "I prefer verbose error logging with stack traces..."
     Tags: [logging, debugging, errors]
-    Location: preferences/pref_001_verbose-error-logs.json
+    Location: preferences/pref_verbose_error_logs.json
     
-[2] pref_005 - Minimal Logging
+[2] pref_minimal_logging - Minimal Logging
     Created: 2026-05-20 | Activated: 3 times
     Content: "I prefer minimal logging to reduce noise..."
     Tags: [logging, production, performance]
-    Location: preferences/pref_005_minimal-logging.json
+    Location: preferences/pref_minimal_logging.json
 
 These contradict each other about logging preferences.
 
 Which applies now?
-  [1] Use pref_001 (verbose)  [2] Use pref_005 (minimal)  
+  [1] Use pref_verbose_error_logs (verbose)  [2] Use pref_minimal_logging (minimal)  
   [b] Show both (decide by context)  [d] Delete one (resolve permanently)  
   [k] Keep both (apply in different contexts)
 
@@ -113,7 +113,7 @@ if (inCleanup && confirmed) {
 ### [d] - Delete One
 
 ```javascript
-console.log("Which to delete?\n[1] Delete pref_001\n[2] Delete pref_005\n[n] Cancel")
+console.log("Which to delete?\n[1] Delete pref_verbose_error_logs\n[2] Delete pref_minimal_logging\n[n] Cancel")
 const choice = getUserInput()
 if (choice !== 'n') deleteMemory(memories[parseInt(choice) - 1])
 ```
@@ -123,9 +123,9 @@ if (choice !== 'n') deleteMemory(memories[parseInt(choice) - 1])
 ```javascript
 console.log("Add context note to clarify when each applies? [y/n]: _")
 if (yes) {
-  console.log("When does pref_001 apply?: _")
+  console.log("When does pref_verbose_error_logs apply?: _")
   memory1.context += `\n\nApplies when: ${getUserInput()}`
-  console.log("When does pref_005 apply?: _")
+  console.log("When does pref_minimal_logging apply?: _")
   memory2.context += `\n\nApplies when: ${getUserInput()}`
   saveMemory(memory1); saveMemory(memory2)
 }
@@ -166,16 +166,16 @@ tags → check each group → present all conflicts
 **Conflict with self (outdated):**
 
 ```text
-pref_001: "I prefer X" (6 months ago)
-pref_005: "I prefer Y" (yesterday)
+pref_verbose_logging: "I prefer X" (6 months ago)
+pref_minimal_logging: "I prefer Y" (yesterday)
 Looks like preference change. Suggest: Delete older? [y/n]: _
 ```
 
 **Conflict across scopes:**
 
 ```text
-Global pref_001: "I prefer X"
-Project sol_003: "Use Y" (contradicts global)
+Global pref_verbose_logging: "I prefer X"
+Project sol_use_minimal_logging: "Use Y" (contradicts global)
 Might be intentional (project override). Keep both? [y/n]: _
 ```
 
