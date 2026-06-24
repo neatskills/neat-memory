@@ -104,12 +104,11 @@ knowledge
 ```text
 ~/.claude/neat_memory/
   preferences/
-    pref_001_verbose-logging.json
+    pref_verbose_logging.json
   patterns/
-    pat_001_sql-before-cache.json
+    pat_sql_before_cache.json
   .index/
     index.json
-    counters.json
 ```
 
 ### Project (Team)
@@ -117,12 +116,11 @@ knowledge
 ```text
 {project}/.claude/neat_memory/
   solutions/
-    sol_001_zustand-state.json
+    sol_zustand_state.json
   lessons/
-    les_001_redis-sessions.json
+    les_redis_sessions_unsafe.json
   .index/
     index.json
-    counters.json
 ```
 
 ## Memory Schema
@@ -131,7 +129,7 @@ Memories are stored as JSON with strict schema:
 
 ```json
 {
-  "id": "pat_012",
+  "id": "pat_sql_before_cache",
   "type": "pattern",
   "title": "SQL Optimization Before Caching",
   "created": "2026-06-24T10:30:00Z",
