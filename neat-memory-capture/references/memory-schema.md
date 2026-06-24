@@ -32,14 +32,14 @@ Complete schema for memory files stored in `neat_memory/` directories.
   "relationships": [              // Links to related memories
     {
       "type": "extends",          // supersedes | applies | contradicts | extends
-      "id": "pat_001",           // Related memory ID
+      "id": "pat_profiling_first",           // Related memory ID
       "reason": "Why they're related"  // Optional explanation
     }
   ],
   
   "merged_from": [                // Added when duplicates are merged
     {
-      "id": "pat_008",
+      "id": "pat_query_batching",
       "title": "Original title",
       "merged_date": "2026-06-24T16:00:00Z"
     }
