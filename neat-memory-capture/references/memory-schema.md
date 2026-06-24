@@ -9,7 +9,7 @@ Complete schema for memory files stored in `neat_memory/` directories.
   // ━━━ Required Fields ━━━
   
   // Identity
-  "id": "pat_012",              // Format: {type}_{counter} (pref|pat|sol|les)
+  "id": "pat_sql_before_cache",              // Format: {prefix}_{slug} (pref|pat|sol|les)
   "type": "pattern",            // preference | pattern | solution | lesson
   "title": "Short Name",        // 3-7 words descriptive title
   "created": "2026-06-24T10:30:00Z",  // ISO 8601 timestamp
@@ -59,20 +59,20 @@ Complete schema for memory files stored in `neat_memory/` directories.
 ## File Naming Convention
 
 ```text
-{type}_{counter}_{slug}.json
+{prefix}_{slug}.json
 
 Examples:
-pref_001_verbose-logging.json
-pat_012_sql-before-cache.json
-sol_003_zustand-state.json
-les_001_redis-sessions.json
+pref_verbose_logging.json
+pat_sql_before_cache.json
+sol_use_zustand_state.json
+les_redis_sessions_unsafe.json
 ```
 
 ## Complete Real-World Example
 
 ```json
 {
-  "id": "pat_012",
+  "id": "pat_sql_before_cache",
   "type": "pattern",
   "title": "SQL Optimization Before Caching",
   "created": "2026-06-24T10:30:00Z",
@@ -97,7 +97,7 @@ batched.",
   "relationships": [
     {
       "type": "extends",
-      "id": "pat_001",
+      "id": "pat_profiling_first",
       "reason": "Applies general profiling pattern to SQL specifically"
     }
   ]
@@ -106,8 +106,8 @@ batched.",
 
 ## Validation Rules
 
-**ID format:** `{type}_{counter}` where type is `pref|pat|sol|les` and
-counter is 3+ digits
+**ID format:** `{prefix}_{slug}` where prefix is `pref|pat|sol|les` and
+slug is lowercase with underscores
 
 **Type values:** Must be exactly one of: `preference`, `pattern`,
 `solution`, `lesson`
@@ -126,24 +126,11 @@ counter is 3+ digits
 
 ```json
 {
-  "pat_012": {
+  "pat_sql_before_cache": {
     "title": "SQL Optimization Before Caching",
     "type": "pattern",
     "tags": ["performance", "database", "optimization"],
-    "file_path": "patterns/pat_012_sql-before-cache.json"
+    "file_path": "patterns/pat_sql_before_cache.json"
   }
 }
 ```
-
-### counters.json
-
-```json
-{
-  "preferences": 5,
-  "patterns": 12,
-  "solutions": 8,
-  "lessons": 3
-}
-```
-
-Counter is incremented after each successful capture for that type.
