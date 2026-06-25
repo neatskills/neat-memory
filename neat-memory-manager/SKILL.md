@@ -172,8 +172,42 @@ Choose: _
 
 1. Copy markdown file to `~/.claude/memory/`
 2. Update frontmatter in neat-memory: `promoted: true`
-3. Add to `~/.claude/memory/MEMORY.md` index
-4. Show both paths
+3. Show both paths (DO NOT update MEMORY.md yet - Claude will do this in Step 6.5)
+4. Continue to Step 6.5 for quality review
+
+### Step 6.5: Quality Review After Promotion
+
+**CRITICAL:** After promoting memory(ies) to auto-memory, prompt user to ask Claude to review quality and update MEMORY.md.
+
+For each just-promoted memory:
+
+**Prompt user:**
+
+```text
+━━━ Promotion Complete - Quality Review Needed ━━━
+
+Promoted 1 memory to auto-memory:
+  • ~/.claude/memory/skill-documentation-best-practices.md
+
+⚠️  IMPORTANT: Ask Claude Code to review and finalize:
+
+  "Review the quality of the skill-documentation-best-practices memory:
+   - Check description is trigger-focused (starts with When/During/While)
+   - Verify frontmatter has no neat-memory extras (tags, intent_triggers, etc)
+   - Ensure body follows auto-memory format (rule → Why → How to apply)
+   - Add link to MEMORY.md with concise one-liner (under 150 chars)"
+
+Claude will:
+  ✓ Review and fix the memory file if needed
+  ✓ Add properly formatted entry to ~/.claude/memory/MEMORY.md
+  ✓ Ensure it triggers correctly when relevant
+
+Press Enter to continue...
+```
+
+**DO NOT update MEMORY.md in this skill** - let Claude do it during quality review so the description is optimized from the start.
+
+**After user reviews with Claude:** Continue to next step.
 
 ### Step 7: Review Demotion Candidates (auto global → neat global)
 
@@ -210,14 +244,47 @@ Choose: _
    - `user` → `preference`
    - `project` → `solution` or `lesson` (shouldn't happen for global)
    - `reference` → `pattern`
-3. Add `demoted_from_auto_memory: true` to frontmatter
+3. Add `demoted_from_auto_memory: true` to neat-memory frontmatter
 4. Save to `~/.claude/neat_memory/{type}/`
-5. Ask user to manually remove from `~/.claude/memory/` (show path)
-6. Update neat-memory index
+5. Update neat-memory index
+6. Show both paths (DO NOT remove from auto-memory yet - Claude will do this in Step 7.5)
+7. Continue to Step 7.5 for cleanup
+
+### Step 7.5: Cleanup After Demotion
+
+**CRITICAL:** After demoting memory(ies) from auto-memory, prompt user to ask Claude to clean up auto-memory files.
+
+For each just-demoted memory:
+
+**Prompt user:**
+
+```text
+━━━ Demotion Complete - Cleanup Needed ━━━
+
+Demoted 1 memory to neat-memory:
+  • ~/.claude/neat_memory/patterns/detailed-debugging-workflow.md
+
+⚠️  IMPORTANT: Ask Claude Code to clean up auto-memory:
+
+  "Remove detailed-debugging-workflow from auto-memory:
+   - Delete ~/.claude/memory/detailed-debugging-workflow.md
+   - Remove the entry from ~/.claude/memory/MEMORY.md"
+
+Claude will:
+  ✓ Delete the file from auto-memory
+  ✓ Remove the MEMORY.md link
+  ✓ Confirm cleanup is complete
+
+Press Enter to continue...
+```
+
+**DO NOT delete auto-memory files in this skill** - let Claude do it during cleanup to ensure both file and MEMORY.md entry are properly removed.
+
+**After user cleans up with Claude:** Continue to next step.
 
 ### Step 8: Update Indexes
 
-Rebuild `.index/index.json` from filesystem, update `MEMORY.md` if auto-memory changed.
+Rebuild `.index/index.json` from filesystem only (neat-memory index).
 
 ### Step 9: Summary
 

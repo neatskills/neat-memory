@@ -62,10 +62,31 @@ Choose [1-5]: _
 ### Step 3: Extract Content
 
 **Title:** 3-7 words
+**Description:** Trigger-focused summary (see below)
 **Content:** 200-500 words with **Why:** and **How to apply:** sections
 **Tags:** 3-7 keywords (YAML array format)
 **Triggers:** 3-5 search terms (YAML array format)
 **Context:** Why/when discovered (goes in markdown body)
+
+**Description Format (CRITICAL for auto-memory promotion):**
+
+The description field determines when auto-memory loads this memory. Use trigger-focused phrasing:
+
+✅ **Strong (trigger-focused):**
+- "When writing SKILL.md files - extract code to scripts/, use JSON with inline comments, real roles for Role: field"
+- "When facing API latency - optimize SQL queries before adding caching, not the other way around"
+- "During code review - check for N+1 queries in ORM code before approving"
+- "While debugging performance - profile first, then optimize hot paths, avoid premature optimization"
+
+❌ **Weak (topic-only):**
+- "Best practices for documenting AI-agent-driven skills"
+- "SQL optimization before caching"
+- "Code review guidelines"
+- "Performance debugging approach"
+
+**Pattern:** `When/During/While [context/trigger] - [key rule/principle]`
+
+**Length:** Aim for 80-150 characters - specific enough to trigger correctly, concise enough for quick scanning.
 
 Generate markdown with YAML frontmatter (see [references/memory-schema.md](references/memory-schema.md))
 
@@ -175,7 +196,7 @@ Example: "SQL Optimization Before Caching" → `sql-optimization-before-caching.
 ```markdown
 ---
 name: sql-optimization-before-caching
-description: Optimize SQL queries before adding caching layers
+description: When facing API latency - optimize SQL queries before adding caching, fix root causes not symptoms
 metadata:
   type: feedback
   neat_type: pattern
@@ -185,9 +206,9 @@ metadata:
   promoted: false
 ---
 
-When facing API latency, always optimize database queries before adding caching layers.
+Optimize database queries before adding caching layers when facing API latency.
 
-**Why:** Caching masks symptoms; query optimization fixes root causes.
+**Why:** Caching masks symptoms; query optimization fixes root causes. Discovered during API performance debugging - adding Redis cache hid the fact that N+1 queries were still hammering the database.
 
 **How to apply:**
 1. Profile to identify slow queries
@@ -195,9 +216,7 @@ When facing API latency, always optimize database queries before adding caching 
 3. Verify indexes exist
 4. Only add caching after optimization
 
-**Context:** Discovered during API performance debugging session.
-
-**Source:** 2026-06-24 - API debugging
+**Source:** 2026-06-24 - API debugging session
 ```
 
 ### Step 7: Update Index
